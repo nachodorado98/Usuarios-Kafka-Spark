@@ -2,43 +2,39 @@ from airflow import DAG
 from datetime import datetime
 from airflow.operators.python import PythonOperator
 from confluent_kafka import Producer
-from confluent_kafka.admin import AdminClient, NewTopic
 import json
+import time
 
 from python.src.extraer_data_api import obtenerUsuarioAPI
+from python.src.kafka.topic_kafka import crearTopic
+from python.src.kafka.configkafka import SERVIDOR, TOPIC
 
 
-def crearTopic(topic:str)->None:
+def enviarDataStream()->None:
 
-	admin=AdminClient({"bootstrap.servers":"kafka:19092"})
+	producer=Producer({"bootstrap.servers":SERVIDOR})
 
-	if topic not in admin.list_topics().topics:
+	tiempo_actual=time.time()
 
-		print(f"Creando topic {topic}...")
+	while True:
 
-		objeto_topic=NewTopic(topic=topic, num_partitions=3, replication_factor=1)
+		if time.time()>tiempo_actual+60:
 
-		admin.create_topics([objeto_topic])
+			break
 
-		crearTopic(topic)
+		try:
 
-	else:
+			mensaje=obtenerUsuarioAPI()
 
-		print(f"Topic {topic} creado")
+			producer.produce(TOPIC, json.dumps(mensaje).encode("utf-8"))
 
-def enviarData()->None:
+			producer.flush()
 
-	crearTopic("usuarios")
+			print("Usuario enviado correctamente")
 
-	producer=Producer({"bootstrap.servers":"kafka:19092"})
+		except Exception:
 
-	mensaje=obtenerUsuarioAPI()
-
-	producer.produce("usuarios", json.dumps(mensaje))
-
-	producer.flush()
-	
-	print("Usuario enviado correctamente")
+			print("Error al enviar el usuario")
 
 
 
@@ -48,7 +44,9 @@ with DAG("dag_stream_data",
 		schedule_interval="@daily",
 		catchup=False) as dag:
 
-	tarea_enviar_data=PythonOperator(task_id="enviar_data", python_callable=enviarData)
+	tarea_crear_topic=PythonOperator(task_id="crear_topic", python_callable=lambda : crearTopic(TOPIC))
+
+	tarea_enviar_data_stream=PythonOperator(task_id="enviar_data_stream", python_callable=enviarDataStream)
 
 
-tarea_enviar_data
+tarea_crear_topic >> tarea_enviar_data_stream
