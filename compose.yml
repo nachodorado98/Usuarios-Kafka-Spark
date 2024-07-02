@@ -191,10 +191,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
     networks:
       - mi_red
 
@@ -229,6 +225,17 @@ services:
       - zookeeper
     networks:
       - mi_red
+
+  consumer:
+    build: ./consumer
+    container_name: consumer
+    volumes:
+      - ./consumer:/app
+    networks:
+      - mi_red
+    depends_on:
+      - zookeeper
+      - kafka
       
 volumes:
   postgres-db-volume:
