@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+from pyspark.sql import functions as F
 from typing import Optional
 import sys
 
@@ -47,9 +48,21 @@ def conectarStreamKafka(spark:SparkSession)->Optional[DataFrame]:
 
 def dataframe_seleccionado(df:DataFrame)->DataFrame:
 
-	esquema=StructType([StructField("key", StringType(), True), StructField("value", StringType(), True)])
+	esquema=StructType([StructField("nombre", StringType(), False),
+						StructField("apellido", StringType(), False),
+						StructField("genero", StringType(), False),
+						StructField("direccion", StringType(), False),
+						StructField("codigo_postal", StringType(), False),
+						StructField("correo", StringType(), False),
+						StructField("usuario", StringType(), False),
+						StructField("fecha_nacimiento", StringType(), False),
+						StructField("fecha_registro", StringType(), False),
+						StructField("telefono", StringType(), False),
+						StructField("imagen", StringType(), False)])
 
-	return df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+	return df.selectExpr("CAST(value AS STRING)")\
+				.select(F.from_json(F.col("value"), esquema).alias("data"))\
+				.select("data.*")
 
 
 if __name__ == "__main__":
@@ -60,11 +73,12 @@ if __name__ == "__main__":
 
 	df_seleccionado=dataframe_seleccionado(df)
 
-	print("La sesion en stream se esta iniciando...")
+	print("La sesion en streaming se esta iniciando...")
 
-	consulta_stream=df_seleccionado.writeStream \
-								    .outputMode("append") \
-								    .format("console") \
-								    .start()
-
-	consulta_stream.awaitTermination()
+	df_seleccionado.writeStream\
+					.outputMode("append")\
+					.format("parquet")\
+					.option("path", "/opt/spark/nacho/scripts/datos_kafka")\
+					.option("checkpointLocation", "/opt/spark/nacho/scripts/checkpoint")\
+					.start()\
+					.awaitTermination()
