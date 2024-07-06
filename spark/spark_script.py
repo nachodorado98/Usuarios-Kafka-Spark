@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType
 from pyspark.sql import functions as F
 from typing import Optional
 import sys
@@ -55,14 +55,17 @@ def dataframe_seleccionado(df:DataFrame)->DataFrame:
 						StructField("codigo_postal", StringType(), False),
 						StructField("correo", StringType(), False),
 						StructField("usuario", StringType(), False),
-						StructField("fecha_nacimiento", StringType(), False),
-						StructField("fecha_registro", StringType(), False),
+						StructField("fecha_nacimiento", DateType(), False),
+						StructField("fecha_registro", DateType(), False),
 						StructField("telefono", StringType(), False),
 						StructField("imagen", StringType(), False)])
 
+	columnas=["data.nombre", "data.apellido", "data.genero", "data.direccion", "data.correo", "data.usuario",
+				"data.fecha_nacimiento", "data.telefono", "data.imagen"]
+
 	return df.selectExpr("CAST(value AS STRING)")\
 				.select(F.from_json(F.col("value"), esquema).alias("data"))\
-				.select("data.*")
+				.select(columnas)
 
 
 if __name__ == "__main__":
@@ -77,8 +80,7 @@ if __name__ == "__main__":
 
 	df_seleccionado.writeStream\
 					.outputMode("append")\
-					.format("parquet")\
-					.option("path", "/opt/spark/nacho/scripts/datos_kafka")\
+					.foreachBatch(lambda df, id_batch: escribirTabla(df, "usuarios", "append"))\
 					.option("checkpointLocation", "/opt/spark/nacho/scripts/checkpoint")\
 					.start()\
 					.awaitTermination()
