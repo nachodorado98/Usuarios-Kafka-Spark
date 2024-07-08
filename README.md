@@ -51,9 +51,10 @@ Para ejecutar la aplicación con Docker:
     ```
 
 4. **DAG STREAM DATA**
-Inicia el DAG Equipos en la interfaz de Apache Airflow para generar los usuarios en streaming con Kafka: `http://localhost:8080`.
 
-Este DAG genera durante un minuto los usuarios simulando un sistema de registro de usuraios. Esta planificado para ejecutarse de manera diaria pero se puede modificar e incluso ejeuctar de manera manual.
+Inicia el DAG Stream Data en la interfaz de Apache Airflow para generar los usuarios en streaming con Kafka: `http://localhost:8080`.
+
+Este DAG genera durante un minuto los usuarios simulando un sistema de registro de usuarios. Esta planificado para ejecutarse de manera diaria pero se puede modificar e incluso ejeuctar de manera manual.
 
 5. Dentro del contenedor del servicio `spark-master`, cambia al directorio del script para ejecutar la aplicacion de Spark:
 
@@ -66,6 +67,8 @@ Este DAG genera durante un minuto los usuarios simulando un sistema de registro 
     ```bash
     spark-submit --packages "org.postgresql:postgresql:42.2.23,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0" ./spark_script.py
     ```
+
+Este script de Spark realiza una obtencion de los usuarios en streaming enviados por Kafka. Despues los procesa y escribe en la BBDD de Postgres para su almacenamiento.
 
 ### Tests
 
